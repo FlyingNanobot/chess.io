@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "start:https": "node index.js --https",
+    "generate-certs": "node -e \"require('fs').mkdirSync('certs',{recursive:true})\" && openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 365 -subj \"/CN=localhost\" -keyout certs/key.pem -out certs/cert.pem"
   },
   "keywords": [
     "chess",
@@ -15,13 +17,13 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "chess.js": "^1.0.0-beta.8",
+    "cors": "^2.8.5",
     "express": "^4.18.2",
     "socket.io": "^4.5.4",
-    "uuid": "^9.0.0",
-    "cors": "^2.8.5",
-    "chess.js": "^1.0.0-beta.8"
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "nodemon": "^2.0.20"
+    "nodemon": "^3.1.11"
   }
 }
