@@ -60,21 +60,40 @@ npm install
 
 ### 5. Run the Application
 
-**Terminal 1 - Start Backend Server:**
+**Running locally (HTTP)**
+
+If you prefer the existing HTTP development workflow:
+
 ```bash
+# Terminal 1 - start server (http)
 cd server
 npm run dev
-# Server running on http://localhost:5000
-```
 
-**Terminal 2 - Start Frontend Client:**
-```bash
+# Terminal 2 - start client (http)
 cd client
 npm start
-# Client running on http://localhost:3000
 ```
 
-Open `http://localhost:3000` in your browser and start playing!
+Open `http://localhost:3000` in your browser and start playing.
+
+**Running locally (HTTPS) — recommended for testing secure contexts**
+
+1. Generate a self-signed certificate (requires `openssl`):
+
+```powershell
+cd server
+npm run generate-certs
+```
+
+2. Start the server in HTTPS mode and the client with HTTPS enabled from the repo root:
+
+```powershell
+# from repo root
+npm install    # ensure dev deps (concurrently, cross-env) are installed
+npm run start:https
+```
+
+This runs the server with `https://localhost:5000` and the client served with `https://localhost:3000`. Browsers will show a security warning for the self-signed certificate unless you add it to your OS/browser trust store or use `mkcert` to create trusted local certificates.
 
 ---
 
@@ -170,14 +189,14 @@ Set environment variables in your hosting platform's dashboard.
 
 ### Client (`.env.local`)
 ```env
-REACT_APP_SERVER_URL=http://localhost:5000
+REACT_APP_SERVER_URL=https://localhost:5000
 ```
 
 ### Server (`.env`)
 ```env
 PORT=5000
 NODE_ENV=development
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGIN=https://localhost:3000
 ```
 
 ---

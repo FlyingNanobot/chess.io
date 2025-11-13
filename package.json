@@ -1,0 +1,24 @@
+{
+  "name": "chess.io",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monorepo for chess.io (client + server)",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=14"
+  },
+  "scripts": {
+    "start:server": "npm --prefix server start",
+    "start:client": "npm --prefix client start",
+    "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
+    "start:https": "concurrently \"npm run start:https --prefix server\" \"cross-env HTTPS=true PORT=3000 npm start --prefix client\"",
+    "dev": "concurrently \"npm run start:server\" \"npm run start:client\"",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "cross-env": "^7.0.3"
+  },
+  "keywords": ["chess", "socket.io", "react"],
+  "license": "MIT"
+}

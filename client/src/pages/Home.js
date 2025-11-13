@@ -9,8 +9,9 @@ function Home() {
   const handleStartGame = async () => {
     setLoading(true);
     try {
+      // Generate unique game ID for each new game session
       const gameId = uuidv4();
-      // Optional: Call backend to register game session
+      // Always create a fresh game - no caching of old games
       navigate(`/game/${gameId}`);
     } catch (error) {
       console.error('Failed to start game:', error);
@@ -18,18 +19,42 @@ function Home() {
     }
   };
 
+  const handleBotGame = () => {
+    navigate('/bots');
+  };
+
   return (
     <div className="container">
       <div style={{ textAlign: 'center' }}>
-        <h2>Welcome to Instant Chess!</h2>
-        <p>Start a new game and share the link with a friend to play together.</p>
-        <button 
-          onClick={handleStartGame} 
-          disabled={loading}
-          style={{ marginTop: '20px', padding: '15px 40px', fontSize: '1.1rem' }}
-        >
-          {loading ? 'Creating Game...' : 'Start Game'}
-        </button>
+        <h2 style={{ color: '#ffffff', fontSize: '1.8rem', marginBottom: '20px' }}>Welcome to chess.io!</h2>
+        <p style={{ color: '#b0b0b0', fontSize: '1.1rem', marginBottom: '30px' }}>
+          Play chess with friends online or challenge a bot opponent.
+        </p>
+        
+        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button 
+            onClick={handleStartGame} 
+            disabled={loading}
+            style={{ 
+              padding: '15px 40px', 
+              fontSize: '1rem',
+              minWidth: '200px'
+            }}
+          >
+            {loading ? 'Creating Game...' : '👥 Play Against Player'}
+          </button>
+          
+          <button 
+            onClick={handleBotGame}
+            style={{ 
+              padding: '15px 40px', 
+              fontSize: '1rem',
+              minWidth: '200px'
+            }}
+          >
+            🤖 Play Against Bot
+          </button>
+        </div>
       </div>
     </div>
   );
