@@ -49,12 +49,8 @@ app.use(express.json());
 const gameManager = new GameManager();
 
 // Routes
-app.get('/ping', (req, res) => {
-  res.json({ pong: true, timestamp: new Date().toISOString() });
-});
-
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'Server is running', timestamp: new Date().toISOString() });
+  res.json({ status: 'Server is running' });
 });
 
 app.get('/api/game/:id', (req, res) => {

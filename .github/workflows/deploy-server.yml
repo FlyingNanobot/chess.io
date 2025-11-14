@@ -1,0 +1,62 @@
+name: Deploy Server to Heroku/Render
+
+on:
+  push:
+    branches:
+      - main
+      - iteration-002-dev
+    paths:
+      - 'server/**'
+      - '.github/workflows/deploy-server.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create server release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: server-release-${{ github.run_number }}
+          release_name: Server Release ${{ github.run_number }}
+          body: |
+            Server build for deployment.
+            
+            **Deployment Instructions:**
+            
+            1. **For Render (Recommended):**
+               - Fork this repo or push to a branch
+               - Go to render.com and create a Web Service
+               - Connect your GitHub repo
+               - Set Build Command: `cd server && npm install`
+               - Set Start Command: `cd server && npm start`
+               - Add environment variables (see DEPLOYMENT.md)
+            
+            2. **For Heroku:**
+               - `heroku create chess-io-server`
+               - `git push heroku main`
+               - Set config vars: `heroku config:set CORS_ORIGIN=https://your-client-url.github.io`
+            
+            3. **For Railway:**
+               - Connect GitHub repo at railway.app
+               - Set root directory: `server`
+               - Add PORT and other env vars
+          draft: false
+          prerelease: true
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: deploy-server
+    steps:
+      - name: Notify deployment
+        run: |
+          echo "Server deployment workflow completed!"
+          echo "Next steps:"
+          echo "1. Deploy the server to Heroku, Render, or Railway"
+          echo "2. Set REACT_APP_SERVER_URL secret with server URL"
+          echo "3. Client will automatically deploy to GitHub Pages"

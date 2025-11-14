@@ -60,40 +60,26 @@ npm install
 
 ### 5. Run the Application
 
-**Running locally (HTTP)**
-
-If you prefer the existing HTTP development workflow:
+**Development mode (HTTP locally):**
 
 ```bash
-# Terminal 1 - start server (http)
-cd server
-npm run dev
+# From repo root - runs both server and client
+npm start
 
-# Terminal 2 - start client (http)
-cd client
+# Or separately:
+
+# Terminal 1 - Backend
+cd server
+npm start
+
+# Terminal 2 - Frontend
+cd ../client
 npm start
 ```
 
-Open `http://localhost:3000` in your browser and start playing.
+Open `http://localhost:3000` in your browser and start playing!
 
-**Running locally (HTTPS) — recommended for testing secure contexts**
-
-1. Generate a self-signed certificate (requires `openssl`):
-
-```powershell
-cd server
-npm run generate-certs
-```
-
-2. Start the server in HTTPS mode and the client with HTTPS enabled from the repo root:
-
-```powershell
-# from repo root
-npm install    # ensure dev deps (concurrently, cross-env) are installed
-npm run start:https
-```
-
-This runs the server with `https://localhost:5000` and the client served with `https://localhost:3000`. Browsers will show a security warning for the self-signed certificate unless you add it to your OS/browser trust store or use `mkcert` to create trusted local certificates.
+**For production deployment**, see [DEPLOYMENT.md](./DEPLOYMENT.md)
 
 ---
 
@@ -168,35 +154,46 @@ chess.io/
 
 ## 🚀 Deployment
 
-### Frontend (Vercel/Netlify)
+**Ready to go live?** See the comprehensive [**DEPLOYMENT.md**](./DEPLOYMENT.md) guide for:
+
+- ✅ Deploying frontend to **GitHub Pages** (automatic)
+- ✅ Deploying backend to **Render** or **Heroku** (free tier)
+- ✅ Setting up **GitHub Actions** CI/CD
+- ✅ Connecting frontend to backend
+- ✅ Testing multiplayer online
+
+**Quick Start:**
 ```bash
-cd client
-npm run build
-# Deploy the 'build' folder
+# 1. Push code to GitHub
+git push origin main
+
+# 2. Set up server on Render/Heroku (see DEPLOYMENT.md)
+
+# 3. Add GitHub secret: REACT_APP_SERVER_URL
+
+# 4. Client auto-deploys to GitHub Pages!
 ```
 
-### Backend (Render/Heroku/Railway)
-```bash
-cd server
-npm start
-```
-
-Set environment variables in your hosting platform's dashboard.
+Your chess.io will be live at: `https://yourusername.github.io/chess.io`
 
 ---
 
 ## 📝 Environment Variables
 
-### Client (`.env.local`)
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for production environment setup.
+
+**For local development:**
+
+Client (`.env.local`):
 ```env
-REACT_APP_SERVER_URL=https://localhost:5000
+REACT_APP_SERVER_URL=http://localhost:5000
 ```
 
-### Server (`.env`)
+Server (`.env`):
 ```env
 PORT=5000
 NODE_ENV=development
-CORS_ORIGIN=https://localhost:3000
+CORS_ORIGIN=http://localhost:3000
 ```
 
 ---
