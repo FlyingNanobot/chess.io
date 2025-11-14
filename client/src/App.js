@@ -4,6 +4,8 @@ import Home from './pages/Home';
 import Game from './pages/Game';
 import Bots from './pages/Bots';
 import BotGame from './pages/BotGame';
+import About from './pages/About';
+import Footer from './components/Footer';
 import './App.css';
 
 function AppContent() {
@@ -23,7 +25,9 @@ function AppContent() {
         <Route path="/game/:id" element={<Game />} />
         <Route path="/bots" element={<Bots />} />
         <Route path="/bot-game/:botType/:color" element={<BotGame />} />
+        <Route path="/about" element={<About />} />
       </Routes>
+      <Footer />
     </div>
   );
 }

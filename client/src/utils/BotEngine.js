@@ -12,17 +12,22 @@ class BotEngine {
    * @returns {Promise<string>} - Move in algebraic notation (e.g., 'e2e4')
    */
   static async getMove(fen, botType = 'enpassanto', difficulty = 5) {
+    console.log('[BotEngine] getMove called:', { botType, difficulty, fen: fen.substring(0, 50) + '...' });
+    
     try {
       switch (botType.toLowerCase()) {
         case 'stockfish':
+          console.log('[BotEngine] Requesting Stockfish move');
           return await this.getStockfishMove(fen, difficulty);
         case 'enpassanto':
         default:
+          console.log('[BotEngine] Requesting Enpassanto move');
           return await this.getEnpassantoMove(fen, difficulty);
       }
     } catch (error) {
-      console.error('Bot move generation error:', error);
+      console.error('[BotEngine] Bot move generation error:', error);
       // Fallback to random move
+      console.log('[BotEngine] Falling back to random move');
       return this.getRandomMove(fen);
     }
   }
@@ -34,28 +39,40 @@ class BotEngine {
    * @returns {Promise<string>}
    */
   static async getEnpassantoMove(fen, difficulty = 5) {
+    console.log('[BotEngine] getEnpassantoMove called with:', { fen: fen.substring(0, 50) + '...', difficulty });
+    
     return new Promise((resolve) => {
       setTimeout(() => {
         const chess = new Chess(fen);
         const moves = chess.moves();
+        
+        console.log('[BotEngine] Available moves:', moves.length, moves.slice(0, 5));
+        console.log('[BotEngine] Current turn:', chess.turn(), 'Position valid:', !chess.isCheckmate() && !chess.isStalemate());
 
         if (moves.length === 0) {
+          console.log('[BotEngine] No legal moves available - game over');
           resolve(null); // No legal moves (checkmate/stalemate)
+          return;
         }
 
         // Difficulty-based move selection
         let move;
         if (difficulty >= 8) {
           // High difficulty: prioritize captures and checks
+          console.log('[BotEngine] Difficulty 8+: Using heuristic move selection');
           move = this.selectBestMoveHeuristic(chess, moves);
         } else if (difficulty >= 5) {
           // Medium difficulty: mix of random and tactical
-          move = Math.random() > 0.3 ? this.selectBestMoveHeuristic(chess, moves) : moves[Math.floor(Math.random() * moves.length)];
+          const useHeuristic = Math.random() > 0.3;
+          console.log('[BotEngine] Difficulty 5-7: Using', useHeuristic ? 'heuristic' : 'random', 'move selection');
+          move = useHeuristic ? this.selectBestMoveHeuristic(chess, moves) : moves[Math.floor(Math.random() * moves.length)];
         } else {
           // Low difficulty: mostly random
+          console.log('[BotEngine] Difficulty <5: Using random move selection');
           move = moves[Math.floor(Math.random() * moves.length)];
         }
 
+        console.log('[BotEngine] Selected move:', move);
         resolve(move);
       }, 500); // Simulate thinking time
     });
