@@ -1,16 +1,19 @@
 
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import { Chess } from 'chess.js';
 import ChessBoard from '../components/ChessBoard';
+import AnalysisPanel from '../components/AnalysisPanel';
+import GameModal from '../components/GameModal';
+import PositionAnalyzer from '../utils/PositionAnalyzer';
 
 // Determine server URL. Prefer explicit env var; otherwise match the page protocol
 const SOCKET_SERVER = process.env.REACT_APP_SERVER_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
 
 // Session cache utilities
 const SessionCache = {
-  KEY: 'chess_session',
+  getKey: (gameId) => `chess_session_${gameId}`,
   
   save: (gameId, playerColor, fen, moves, currentTurn) => {
     try {
@@ -22,16 +25,16 @@ const SessionCache = {
         currentTurn,
         timestamp: Date.now(),
       };
-      sessionStorage.setItem(SessionCache.KEY, JSON.stringify(session));
+      sessionStorage.setItem(SessionCache.getKey(gameId), JSON.stringify(session));
       console.log('Session saved:', session);
     } catch (error) {
       console.error('Failed to save session:', error);
     }
   },
 
-  restore: () => {
+  restore: (gameId) => {
     try {
-      const cached = sessionStorage.getItem(SessionCache.KEY);
+      const cached = sessionStorage.getItem(SessionCache.getKey(gameId));
       if (cached) {
         const session = JSON.parse(cached);
         // Only restore if game is relatively recent (within 24 hours)
@@ -46,9 +49,9 @@ const SessionCache = {
     return null;
   },
 
-  clear: () => {
+  clear: (gameId) => {
     try {
-      sessionStorage.removeItem(SessionCache.KEY);
+      sessionStorage.removeItem(SessionCache.getKey(gameId));
       console.log('Session cleared');
     } catch (error) {
       console.error('Failed to clear session:', error);
@@ -58,11 +61,12 @@ const SessionCache = {
 
 function Game() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [socket, setSocket] = useState(null);
   const chessRef = React.useRef(new Chess());
   
   // Restore session from cache or initialize fresh
-  const cachedSession = SessionCache.restore();
+  const cachedSession = SessionCache.restore(id);
   const isRestoredSession = cachedSession && (cachedSession.gameId === id || !id);
   
   const [fen, setFen] = useState(isRestoredSession ? cachedSession.fen : chessRef.current.fen());
@@ -72,6 +76,16 @@ function Game() {
   const [opponentConnected, setOpponentConnected] = useState(false);
   const [moveHistory, setMoveHistory] = useState(isRestoredSession ? cachedSession.moves : []);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [bestMove, setBestMove] = useState(null);
+  const [evaluation, setEvaluation] = useState(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState({
+    title: '',
+    message: '',
+    buttons: [],
+  });
   const gameId = id || (isRestoredSession ? cachedSession.gameId : null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -170,7 +184,6 @@ function Game() {
     }
 
     if (currentTurn !== playerColor) {
-      setErrorMessage("It's not your turn!");
       return false;
     }
 
@@ -183,7 +196,6 @@ function Game() {
       });
 
       if (!move) {
-        setErrorMessage('Invalid move');
         return false;
       }
 
@@ -203,13 +215,96 @@ function Game() {
       return true;
     } catch (error) {
       console.error('Move error:', error);
-      setErrorMessage('Invalid move');
       return false;
+    }
+  };
+
+  const handleAnalyzePosition = async () => {
+    setShowAnalysis(!showAnalysis);
+    if (!showAnalysis) {
+      setIsAnalyzing(true);
+      try {
+        // Run analysis in a timeout to avoid blocking UI
+        setTimeout(() => {
+          const best = PositionAnalyzer.findBestMove(fen, 3, 6);
+          const eval_ = PositionAnalyzer.evaluatePosition(fen);
+          setBestMove(best.move ? { from: best.move.substring(0, 2), to: best.move.substring(2, 4) } : null);
+          setEvaluation(eval_);
+          setIsAnalyzing(false);
+        }, 100);
+      } catch (error) {
+        console.error('Analysis error:', error);
+        setIsAnalyzing(false);
+      }
     }
   };
 
   const gameLink = `${window.location.origin}/game/${gameId || id}`;
   const isPlayerTurn = playerColor === currentTurn;
+
+  // Show game end modal on checkmate/stalemate
+  React.useEffect(() => {
+    if (opponentConnected && fen) {
+      const chess = new Chess(fen);
+      if (chess.isCheckmate()) {
+        const winner = currentTurn === playerColor ? 'Opponent' : 'You';
+        setModalData({
+          title: '♟️ Checkmate!',
+          message: `${winner} won the game!`,
+          buttons: [
+            {
+              label: 'Back to Home',
+              variant: 'primary',
+              onClick: () => navigate('/'),
+            },
+            {
+              label: 'New Game',
+              variant: 'secondary',
+              onClick: () => window.location.reload(),
+            },
+          ],
+        });
+        setModalOpen(true);
+      } else if (chess.isStalemate()) {
+        setModalData({
+          title: '🤝 Stalemate',
+          message: 'The game is a draw.',
+          buttons: [
+            {
+              label: 'Back to Home',
+              variant: 'primary',
+              onClick: () => navigate('/'),
+            },
+            {
+              label: 'New Game',
+              variant: 'secondary',
+              onClick: () => window.location.reload(),
+            },
+          ],
+        });
+        setModalOpen(true);
+      } else if (chess.isInsufficientMaterial()) {
+        setModalData({
+          title: '🤝 Draw',
+          message: 'Insufficient material to continue.',
+          buttons: [
+            {
+              label: 'Back to Home',
+              variant: 'primary',
+              onClick: () => navigate('/'),
+            },
+            {
+              label: 'New Game',
+              variant: 'secondary',
+              onClick: () => window.location.reload(),
+            },
+          ],
+        });
+        setModalOpen(true);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fen]);
 
   // Handle session clear on logout/close
   useEffect(() => {
@@ -228,48 +323,50 @@ function Game() {
         {gameStatus}
       </div>
 
-      {errorMessage && (
+      {errorMessage && !errorMessage.includes('Invalid') && (
         <div className="status error">
           {errorMessage}
         </div>
       )}
 
-      <div className="game-info">
-        <h3>Share this link:</h3>
-        <input 
-          type="text" 
-          value={gameLink} 
-          readOnly 
-          style={{ width: '100%', marginBottom: '10px' }}
-        />
-        <button 
-          onClick={async () => {
-            try {
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(gameLink);
-                setErrorMessage('Link copied!');
-                setTimeout(() => setErrorMessage(''), 2000);
-              } else {
-                // Fallback for older browsers
-                const textArea = document.createElement('textarea');
-                textArea.value = gameLink;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                setErrorMessage('Link copied!');
-                setTimeout(() => setErrorMessage(''), 2000);
+      {!opponentConnected && (
+        <div className="game-info">
+          <h3>Share this link:</h3>
+          <input 
+            type="text" 
+            value={gameLink} 
+            readOnly 
+            style={{ width: '100%', marginBottom: '10px' }}
+          />
+          <button 
+            onClick={async () => {
+              try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  await navigator.clipboard.writeText(gameLink);
+                  setErrorMessage('Link copied!');
+                  setTimeout(() => setErrorMessage(''), 2000);
+                } else {
+                  // Fallback for older browsers
+                  const textArea = document.createElement('textarea');
+                  textArea.value = gameLink;
+                  document.body.appendChild(textArea);
+                  textArea.select();
+                  document.execCommand('copy');
+                  document.body.removeChild(textArea);
+                  setErrorMessage('Link copied!');
+                  setTimeout(() => setErrorMessage(''), 2000);
+                }
+              } catch (err) {
+                console.error('Failed to copy:', err);
+                setErrorMessage('Could not copy link');
               }
-            } catch (err) {
-              console.error('Failed to copy:', err);
-              setErrorMessage('Could not copy link');
-            }
-          }}
-          style={{ width: '100%' }}
-        >
-          Copy Link
-        </button>
-      </div>
+            }}
+            style={{ width: '100%' }}
+          >
+            Copy Link
+          </button>
+        </div>
+      )}
 
       {playerColor && opponentConnected && (
         <div className="game-container">
@@ -279,6 +376,7 @@ function Game() {
             playerColor={playerColor}
             currentTurn={currentTurn}
             isPlayerTurn={isPlayerTurn}
+            boardSize={500}
           />
           
           <div className="game-info">
@@ -288,6 +386,32 @@ function Game() {
             <p><strong>Opponent:</strong> {opponentConnected ? 'Connected ✓' : 'Waiting...'}</p>
             <p><strong>Moves:</strong> {moveHistory.length}</p>
             <p><strong>Status:</strong> {isPlayerTurn ? '🟢 Your Turn' : '⏳ Opponent Turn'}</p>
+            
+            <button
+              onClick={handleAnalyzePosition}
+              style={{
+                width: '100%',
+                padding: '10px',
+                marginTop: '15px',
+                marginBottom: '15px',
+                background: showAnalysis ? '#667eea' : 'transparent',
+                border: '1px solid #667eea',
+                color: '#fff',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              {showAnalysis ? '✓ Analysis' : '📊 Analyze Position'}
+            </button>
+
+            {showAnalysis && (
+              <AnalysisPanel
+                bestMove={bestMove}
+                evaluation={evaluation}
+                isAnalyzing={isAnalyzing}
+                playerColor={playerColor}
+              />
+            )}
             
             <h4>Move History:</h4>
             <div style={{ 
@@ -310,10 +434,11 @@ function Game() {
 
             <button
               onClick={() => {
-                if (socket) {
+                const confirmed = window.confirm('Are you sure you want to resign?');
+                if (confirmed && socket) {
                   socket.emit('resign', { gameId });
+                  navigate('/');
                 }
-                navigate('/');
               }}
               style={{
                 width: '100%',
@@ -335,6 +460,14 @@ function Game() {
           <p style={{ fontSize: '0.9rem', color: '#999' }}>Share the link above with a friend</p>
         </div>
       )}
+
+      <GameModal
+        isOpen={modalOpen}
+        title={modalData.title}
+        message={modalData.message}
+        buttons={modalData.buttons}
+        onClose={() => setModalOpen(false)}
+      />
     </div>
   );
 }

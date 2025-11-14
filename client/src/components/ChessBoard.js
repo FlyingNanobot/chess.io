@@ -2,10 +2,40 @@ import React from 'react';
 import { Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
 
-function ChessBoard({ fen, onMove, playerColor, currentTurn, isPlayerTurn }) {
+function ChessBoard({ fen, onMove, playerColor, currentTurn, isPlayerTurn, boardSize = null, boardOrientation = 'white' }) {
   const chessInstance = React.useRef(new Chess(fen));
   const [selectedSquare, setSelectedSquare] = React.useState(null);
   const [highlightedSquares, setHighlightedSquares] = React.useState({});
+  const [responsiveBoardSize, setResponsiveBoardSize] = React.useState(boardSize);
+
+  // Calculate responsive board size
+  React.useEffect(() => {
+    const calculateBoardSize = () => {
+      const width = window.innerWidth;
+      
+      if (boardSize) {
+        // If explicit size provided, use it but cap on mobile
+        if (width < 768) {
+          setResponsiveBoardSize(Math.min(boardSize, width - 32));
+        } else {
+          setResponsiveBoardSize(boardSize);
+        }
+      } else {
+        // Auto-calculate based on screen size
+        if (width < 480) {
+          setResponsiveBoardSize(width - 32); // Small phones
+        } else if (width < 768) {
+          setResponsiveBoardSize(width - 24); // Tablets
+        } else {
+          setResponsiveBoardSize(500); // Desktop default
+        }
+      }
+    };
+
+    calculateBoardSize();
+    window.addEventListener('resize', calculateBoardSize);
+    return () => window.removeEventListener('resize', calculateBoardSize);
+  }, [boardSize]);
 
   // Update chess instance when FEN changes
   React.useEffect(() => {
@@ -101,7 +131,8 @@ function ChessBoard({ fen, onMove, playerColor, currentTurn, isPlayerTurn }) {
         position={fen}
         onPieceDrop={handleMove}
         onSquareClick={handleSquareClick}
-        boardWidth={350}
+        boardWidth={responsiveBoardSize}
+        boardOrientation={boardOrientation}
         arePiecesDraggable={isPlayerTurn}
         customDarkSquareStyle={{
           backgroundColor: '#1a1a1a',
@@ -112,6 +143,8 @@ function ChessBoard({ fen, onMove, playerColor, currentTurn, isPlayerTurn }) {
         boardStyle={{
           borderRadius: '4px',
           boxShadow: '0 5px 15px rgba(0, 0, 0, 0.5)',
+          maxWidth: '100%',
+          margin: '0 auto',
         }}
         customSquareStyles={{
           [selectedSquare]: {
